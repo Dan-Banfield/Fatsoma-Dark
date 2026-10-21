@@ -1,19 +1,23 @@
 name: Build Tweak
-on: [push]
+on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Install Theos
+    - uses: actions/checkout@v4
+    
+    - name: Install Theos & SDKs
       run: |
         git clone --recursive https://github.com/theos/theos.git $HOME/theos
+        curl -sL https://github.com/theos/sdks/archive/master.tar.gz | tar -xz -C $HOME/theos/sdks --strip-components=1
+        
     - name: Build dylib
       run: |
         export THEOS=$HOME/theos
-        make package FINALPACKAGE=1
+        make FINALPACKAGE=1
+        
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Compiled-Dylib
         path: .theos/obj/strip/DarkCustomer.dylib
