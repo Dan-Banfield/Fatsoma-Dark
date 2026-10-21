@@ -6,8 +6,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install Theos & SDKs
+    - name: Install ldid, Theos & SDKs
       run: |
+        brew install ldid
         git clone --recursive https://github.com/theos/theos.git $HOME/theos
         curl -sL https://github.com/theos/sdks/archive/master.tar.gz | tar -xz -C $HOME/theos/sdks --strip-components=1
         
@@ -20,4 +21,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Compiled-Dylib
-        path: .theos/obj/strip/DarkCustomer.dylib
+        path: .theos/obj/DarkCustomer.dylib
