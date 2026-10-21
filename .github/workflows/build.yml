@@ -1,0 +1,19 @@
+name: Build Tweak
+on: [push]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Theos
+      run: |
+        git clone --recursive https://github.com/theos/theos.git $HOME/theos
+    - name: Build dylib
+      run: |
+        export THEOS=$HOME/theos
+        make package FINALPACKAGE=1
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: Compiled-Dylib
+        path: .theos/obj/strip/DarkCustomer.dylib
