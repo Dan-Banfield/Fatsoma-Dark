@@ -2,7 +2,7 @@
 
 static BOOL isDarkModeEnabled() {
     NSNumber *val = [[NSUserDefaults standardUserDefaults] objectForKey:@"CustomDarkModeEnabled"];
-    return val ? [val boolValue] : YES; // Default to YES
+    return val ? [val boolValue] : YES;
 }
 
 static void applyThemeToWindows() {
@@ -30,10 +30,10 @@ static void applyThemeToWindows() {
         self.overrideUserInterfaceStyle = isDarkModeEnabled() ? UIUserInterfaceStyleDark : UIUserInterfaceStyleLight;
     }
     
-    // Add a 3-finger tap gesture to toggle Dark Mode from anywhere, including Settings
+    // 3-finger double-tap gesture anywhere to toggle theme
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(toggleCustomDarkMode)];
     tap.numberOfTouchesRequired = 3;
-    tap.numberOfTapsRequired = 2; // Double tap with 3 fingers
+    tap.numberOfTapsRequired = 2;
     [self addGestureRecognizer:tap];
 }
 
@@ -45,7 +45,6 @@ static void applyThemeToWindows() {
     
     applyThemeToWindows();
     
-    // Show a quick alert confirming the change
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Theme Changed" 
                                                                    message:(!current ? @"Dark Mode Enabled" : @"Light Mode Enabled") 
                                                             preferredStyle:UIAlertControllerStyleAlert];
@@ -55,14 +54,20 @@ static void applyThemeToWindows() {
 
 %end
 
-// Optional: If the app hardcodes white backgrounds on standard views, hook UIView
+// Intelligent view background re-mapping (ignoring image/media views)
 %hook UIView
 - (void)setBackgroundColor:(UIColor *)color {
     if (isDarkModeEnabled()) {
-        // Check if the color is pure white or very close to white
+        // Skip UIImageView, UITableViewCell backgrounds, or navigation bars to prevent breaking images
+        if ([self isKindOfClass:[UIImageView class]] || [self isKindOfClass:[UINavigationBar class]]) {
+            %orig;
+            return;
+        }
+        
         CGFloat white = 0, alpha = 0;
-        if ([color getWhite:&white alpha:&alpha] && white > 0.95 && alpha > 0.9) {
-            %orig([UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:alpha]); // iOS system dark gray
+        // If the app sets a pure white background, shift it to dark charcoal
+        if ([color getWhite:&white alpha:&alpha] && white > 0.92 && alpha > 0.9) {
+            %orig([UIColor colorWithRed:0.08 green:0.08 blue:0.09 alpha:alpha]);
             return;
         }
     }
@@ -70,13 +75,28 @@ static void applyThemeToWindows() {
 }
 %end
 
-// Invert black text to white if backgrounds are darkened
+// Ensure text on buttons or headers is readable
 %hook UILabel
 - (void)setTextColor:(UIColor *)color {
     if (isDarkModeEnabled()) {
         CGFloat white = 0, alpha = 0;
-        if ([color getWhite:&white alpha:&alpha] && white < 0.1 && alpha > 0.9) {
+        // If text is dark/black, change it to white for contrast on dark backgrounds
+        if ([color getWhite:&white alpha:&alpha] && white < 0.2 && alpha > 0.9) {
             %orig([UIColor whiteColor]);
+            return;
+        }
+    }
+    %orig;
+}
+%end
+
+// Fix buttons text color where background might have inverted
+%hook UIButton
+- (void)setTitleColor:(UIColor *)color forState:(UIControlState)state {
+    if (isDarkModeEnabled()) {
+        CGFloat white = 0, alpha = 0;
+        if ([color getWhite:&white alpha:&alpha] && white < 0.2 && alpha > 0.9) {
+            %orig([UIColor whiteColor], state);
             return;
         }
     }
